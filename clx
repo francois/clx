@@ -1,0 +1,226 @@
+#!/bin/bash
+
+DBFILE="${HOME}/.clx.db"
+
+main() {
+  if [[ "${1}" == "new" ]]
+  then
+    create_new
+  fi
+
+  if [[ ! -f "${DBFILE}" ]]
+  then
+    instantiate_schema
+  fi
+
+  select_and_run_exercise
+}
+
+create_new() {
+  echo >&2 "Creating new CLX db"
+  rm ${DBFILE}
+}
+
+select_and_run_exercise() {
+  sqlite3 "${DBFILE}" <<EOSQL
+WITH available_exercises(exercise, level) AS (
+    SELECT exercise, min(level) -- 3. find the next levels of each exercise
+    FROM (
+        SELECT exercise, level -- 1. find all exercises
+        FROM repetitions
+        EXCEPT
+        SELECT exercise, level -- 2. remove the ones we've already completed
+        FROM executions) t0
+    GROUP BY exercise)
+
+, next_level(level) AS (
+    SELECT min(level)
+    FROM available_exercises)
+
+INSERT INTO executions(exercise, level, executed_at)
+SELECT exercise, level, datetime('now')
+FROM available_exercises
+JOIN next_level USING (level)
+ORDER BY random()
+LIMIT 1
+EOSQL
+
+  sqlite3 "${DBFILE}" <<EOSQL
+.mode column
+.width 20 5 6 10
+
+SELECT exercise, level, strftime('%H:%M', executed_at, 'localtime'), reps
+FROM executions
+JOIN repetitions USING (exercise, level)
+ORDER BY executed_at DESC
+LIMIT 1
+EOSQL
+}
+
+instantiate_schema() {
+  sqlite3 "${DBFILE}" <<EOSQL
+    BEGIN;
+
+      CREATE TABLE IF NOT EXISTS exercises(
+          exercise text not null primary key check(length(exercise) > 0)
+      );
+
+      CREATE TABLE IF NOT EXISTS repetitions(
+          exercise text not null references exercises
+        , level int not null check(level >= 0)
+        , reps int not null
+        , primary key(exercise, level)
+      );
+
+      CREATE TABLE IF NOT EXISTS executions(
+          exercise text not null
+        , level int not null
+        , executed_at timestamptz not null
+        , primary key(exercise, level)
+        , foreign key(exercise, level) references repetitions
+      );
+
+      INSERT OR IGNORE INTO exercises(exercise)
+      VALUES
+          ('La planche')
+        , ('Push ups')
+        , ('La chaise')
+        , ('Jumping Jacks')
+        , ('Monter les marches')
+        , ('Toucher les orteils')
+        , ('Squats')
+        , ('La table')
+        , ('Vive rotations torse')
+        , ('Étirer le corps')
+        , ('Coups de pieds')
+      ;
+
+      INSERT OR IGNORE INTO repetitions(exercise, level, reps)
+      VALUES
+          ('La planche', 1, '1x30')
+        , ('La planche', 2, '1x40')
+        , ('La planche', 3, '1x50')
+        , ('La planche', 4, '1x60')
+        , ('La planche', 5, '1x60')
+        , ('La planche', 6, '1x75')
+        , ('La planche', 7, '1x75')
+        , ('La planche', 8, '1x90')
+        , ('La planche', 9, '2x45')
+        , ('La planche', 10, '2x60')
+
+        , ('Push ups', 1, '2x8')
+        , ('Push ups', 2, '2x8')
+        , ('Push ups', 3, '2x10')
+        , ('Push ups', 4, '2x10')
+        , ('Push ups', 5, '2x12')
+        , ('Push ups', 6, '2x12')
+        , ('Push ups', 7, '3x10')
+        , ('Push ups', 8, '3x12')
+        , ('Push ups', 9, '3x15')
+        , ('Push ups', 10, '3x20')
+
+        , ('La chaise', 1, '1x30')
+        , ('La chaise', 2, '1x30')
+        , ('La chaise', 3, '2x25')
+        , ('La chaise', 4, '2x30')
+        , ('La chaise', 5, '2x30')
+        , ('La chaise', 6, '1x45')
+        , ('La chaise', 7, '2x30')
+        , ('La chaise', 8, '1x60')
+        , ('La chaise', 9, '2x45')
+        , ('La chaise', 10, '1x90')
+
+        , ('Jumping Jacks', 1, '1x60')
+        , ('Jumping Jacks', 2, '1x75')
+        , ('Jumping Jacks', 3, '1x90')
+        , ('Jumping Jacks', 4, '1x105')
+        , ('Jumping Jacks', 5, '1x120')
+        , ('Jumping Jacks', 6, '2x90')
+        , ('Jumping Jacks', 7, '2x105')
+        , ('Jumping Jacks', 8, '2x120')
+        , ('Jumping Jacks', 9, '2x120')
+        , ('Jumping Jacks', 10, '2x120')
+
+        , ('Monter les marches', 1, '1x4')
+        , ('Monter les marches', 2, '1x4')
+        , ('Monter les marches', 3, '1x5')
+        , ('Monter les marches', 4, '1x5')
+        , ('Monter les marches', 5, '1x6')
+        , ('Monter les marches', 6, '1x6')
+        , ('Monter les marches', 7, '1x7')
+        , ('Monter les marches', 8, '1x7')
+        , ('Monter les marches', 9, '1x8')
+        , ('Monter les marches', 10, '1x8')
+
+        , ('Toucher les orteils', 1, '2x10')
+        , ('Toucher les orteils', 2, '2x10')
+        , ('Toucher les orteils', 3, '2x12')
+        , ('Toucher les orteils', 4, '2x12')
+        , ('Toucher les orteils', 5, '2x14')
+        , ('Toucher les orteils', 6, '2x14')
+        , ('Toucher les orteils', 7, '2x14')
+        , ('Toucher les orteils', 8, '2x14')
+        , ('Toucher les orteils', 9, '2x15')
+        , ('Toucher les orteils', 10, '3x15')
+
+        , ('Squats', 1, '2x10')
+        , ('Squats', 2, '2x10')
+        , ('Squats', 3, '2x15')
+        , ('Squats', 4, '2x15')
+        , ('Squats', 5, '2x20')
+        , ('Squats', 6, '2x20')
+        , ('Squats', 7, '2x30')
+        , ('Squats', 8, '2x40')
+        , ('Squats', 9, '2x40')
+        , ('Squats', 10, '2x40')
+
+        , ('La table', 1, '2x10')
+        , ('La table', 2, '2x15')
+        , ('La table', 3, '2x20')
+        , ('La table', 4, '2x20')
+        , ('La table', 5, '2x30')
+        , ('La table', 6, '3x20')
+        , ('La table', 7, '3x25')
+        , ('La table', 8, '3x30')
+        , ('La table', 9, '3x30')
+        , ('La table', 10, '3x30')
+
+        , ('Vive rotations torse', 1, '2x10')
+        , ('Vive rotations torse', 2, '2x15')
+        , ('Vive rotations torse', 3, '2x20')
+        , ('Vive rotations torse', 4, '2x25')
+        , ('Vive rotations torse', 5, '2x30')
+        , ('Vive rotations torse', 6, '2x30')
+        , ('Vive rotations torse', 7, '2x30')
+        , ('Vive rotations torse', 8, '2x30')
+        , ('Vive rotations torse', 9, '2x30')
+        , ('Vive rotations torse', 10, '2x30')
+
+        , ('Coups de pieds', 1, '2x10')
+        , ('Coups de pieds', 2, '2x10')
+        , ('Coups de pieds', 3, '2x15')
+        , ('Coups de pieds', 4, '2x15')
+        , ('Coups de pieds', 5, '2x20')
+        , ('Coups de pieds', 6, '2x20')
+        , ('Coups de pieds', 7, '3x15')
+        , ('Coups de pieds', 8, '3x20')
+        , ('Coups de pieds', 9, '3x20')
+        , ('Coups de pieds', 10, '3x20')
+
+        , ('Étirer le corps', 1, '1x')
+        , ('Étirer le corps', 2, '1x')
+        , ('Étirer le corps', 3, '1x')
+        , ('Étirer le corps', 4, '1x')
+        , ('Étirer le corps', 5, '1x')
+        , ('Étirer le corps', 6, '1x')
+        , ('Étirer le corps', 7, '1x')
+        , ('Étirer le corps', 8, '1x')
+        , ('Étirer le corps', 9, '1x')
+        , ('Étirer le corps', 10, '1x')
+      ;
+
+    COMMIT;
+EOSQL
+}
+
+main "${1}"
