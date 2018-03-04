@@ -3,22 +3,68 @@
 DBFILE="${HOME}/.clx.db"
 
 main() {
-  if [[ "${1}" == "new" ]]
-  then
-    create_new
-  fi
-
   if [[ ! -f "${DBFILE}" ]]
   then
     instantiate_schema
   fi
 
-  select_and_run_exercise
+  case "${1}" in
+    new)
+      create_new
+      ;;
+
+    add)
+      shift
+      add "${@}"
+      ;;
+
+    -h|--help|help)
+      show_help
+      ;;
+
+    *)
+      select_and_run_exercise
+      ;;
+  esac
+}
+
+show_help() {
+  echo >&2 "Utilisation: clx [--help|-h|help|add|new] [NAME] [REP1] [REP2] [REPn]"
+  echo >&2
+  echo >&2 "Maintient our sélectionne un exercise à exécuter."
+  echo >&2
+  echo >&2 "  new: écrase tout base de donnée existante et la remplace par une version vide"
+  echo >&2
+  echo >&2 "  add: ajoute cet exercise dans la liste des exercises potentiels"
+  echo >&2 "       clx add \"Squats\" 2x10 2x12 3x10 3x15"
+  echo >&2 "       clx add \"Push ups\" 2x11 2x13 3x11 3x17"
+  echo >&2
+  echo >&2 "Quand clx est appelé sans argument, il choisit le prochain exercise du niveau actuel"
+  echo >&2 "Tous les exercises de niveau 1 doivent être exécutés avant de passer au niveau 2:"
+  echo >&2 "chaque niveau est exécuté en bloc avant de passer au niveau suivant."
+  echo >&2 "Si nous suivons l'exemple ci-haut, clx choisira au hasard 2x10 squats OU 2x11 push ups,"
+  echo >&2 "ensuite, il choisira l'exercise qui n'a pas été sélectionné, puis il passera au niveau"
+  echo >&2 "2, soit 2x12 squats ou 2x13 push ups, et ainsi de suite."
 }
 
 create_new() {
-  echo >&2 "Creating new CLX db"
-  rm ${DBFILE}
+  echo >&2 "Création d'une nouvelle version de la base de donnée CLX"
+  rm "${DBFILE}"
+  instantiate_schema
+}
+
+add() {
+  echo >&2 "Ajout de l'exercise: ${1}"
+  local exercise=$( echo "${1}" | sed "s/'/''/" ) # Apply basic SQL quoting
+  shift
+  sqlite3 "${DBFILE}" "INSERT INTO exercises(exercise) VALUES ('${exercise}')"
+  local level=1
+  while [[ ! -z "${1}" ]]
+  do
+    sqlite3 "${DBFILE}" "INSERT INTO repetitions(exercise, level, reps) VALUES ('${exercise}', ${level}, '$( echo "${1}" | sed "s/'/''/" )')"
+    level=$(( level + 1 ))
+    shift
+  done
 }
 
 select_and_run_exercise() {
@@ -80,147 +126,8 @@ instantiate_schema() {
         , foreign key(exercise, level) references repetitions
       );
 
-      INSERT OR IGNORE INTO exercises(exercise)
-      VALUES
-          ('La planche')
-        , ('Push ups')
-        , ('La chaise')
-        , ('Jumping Jacks')
-        , ('Monter les marches')
-        , ('Toucher les orteils')
-        , ('Squats')
-        , ('La table')
-        , ('Vive rotations torse')
-        , ('Étirer le corps')
-        , ('Coups de pieds')
-      ;
-
-      INSERT OR IGNORE INTO repetitions(exercise, level, reps)
-      VALUES
-          ('La planche', 1, '1x30')
-        , ('La planche', 2, '1x40')
-        , ('La planche', 3, '1x50')
-        , ('La planche', 4, '1x60')
-        , ('La planche', 5, '1x60')
-        , ('La planche', 6, '1x75')
-        , ('La planche', 7, '1x75')
-        , ('La planche', 8, '1x90')
-        , ('La planche', 9, '2x45')
-        , ('La planche', 10, '2x60')
-
-        , ('Push ups', 1, '2x8')
-        , ('Push ups', 2, '2x8')
-        , ('Push ups', 3, '2x10')
-        , ('Push ups', 4, '2x10')
-        , ('Push ups', 5, '2x12')
-        , ('Push ups', 6, '2x12')
-        , ('Push ups', 7, '3x10')
-        , ('Push ups', 8, '3x12')
-        , ('Push ups', 9, '3x15')
-        , ('Push ups', 10, '3x20')
-
-        , ('La chaise', 1, '1x30')
-        , ('La chaise', 2, '1x30')
-        , ('La chaise', 3, '2x25')
-        , ('La chaise', 4, '2x30')
-        , ('La chaise', 5, '2x30')
-        , ('La chaise', 6, '1x45')
-        , ('La chaise', 7, '2x30')
-        , ('La chaise', 8, '1x60')
-        , ('La chaise', 9, '2x45')
-        , ('La chaise', 10, '1x90')
-
-        , ('Jumping Jacks', 1, '1x60')
-        , ('Jumping Jacks', 2, '1x75')
-        , ('Jumping Jacks', 3, '1x90')
-        , ('Jumping Jacks', 4, '1x105')
-        , ('Jumping Jacks', 5, '1x120')
-        , ('Jumping Jacks', 6, '2x90')
-        , ('Jumping Jacks', 7, '2x105')
-        , ('Jumping Jacks', 8, '2x120')
-        , ('Jumping Jacks', 9, '2x120')
-        , ('Jumping Jacks', 10, '2x120')
-
-        , ('Monter les marches', 1, '1x4')
-        , ('Monter les marches', 2, '1x4')
-        , ('Monter les marches', 3, '1x5')
-        , ('Monter les marches', 4, '1x5')
-        , ('Monter les marches', 5, '1x6')
-        , ('Monter les marches', 6, '1x6')
-        , ('Monter les marches', 7, '1x7')
-        , ('Monter les marches', 8, '1x7')
-        , ('Monter les marches', 9, '1x8')
-        , ('Monter les marches', 10, '1x8')
-
-        , ('Toucher les orteils', 1, '2x10')
-        , ('Toucher les orteils', 2, '2x10')
-        , ('Toucher les orteils', 3, '2x12')
-        , ('Toucher les orteils', 4, '2x12')
-        , ('Toucher les orteils', 5, '2x14')
-        , ('Toucher les orteils', 6, '2x14')
-        , ('Toucher les orteils', 7, '2x14')
-        , ('Toucher les orteils', 8, '2x14')
-        , ('Toucher les orteils', 9, '2x15')
-        , ('Toucher les orteils', 10, '3x15')
-
-        , ('Squats', 1, '2x10')
-        , ('Squats', 2, '2x10')
-        , ('Squats', 3, '2x15')
-        , ('Squats', 4, '2x15')
-        , ('Squats', 5, '2x20')
-        , ('Squats', 6, '2x20')
-        , ('Squats', 7, '2x30')
-        , ('Squats', 8, '2x40')
-        , ('Squats', 9, '2x40')
-        , ('Squats', 10, '2x40')
-
-        , ('La table', 1, '2x10')
-        , ('La table', 2, '2x15')
-        , ('La table', 3, '2x20')
-        , ('La table', 4, '2x20')
-        , ('La table', 5, '2x30')
-        , ('La table', 6, '3x20')
-        , ('La table', 7, '3x25')
-        , ('La table', 8, '3x30')
-        , ('La table', 9, '3x30')
-        , ('La table', 10, '3x30')
-
-        , ('Vive rotations torse', 1, '2x10')
-        , ('Vive rotations torse', 2, '2x15')
-        , ('Vive rotations torse', 3, '2x20')
-        , ('Vive rotations torse', 4, '2x25')
-        , ('Vive rotations torse', 5, '2x30')
-        , ('Vive rotations torse', 6, '2x30')
-        , ('Vive rotations torse', 7, '2x30')
-        , ('Vive rotations torse', 8, '2x30')
-        , ('Vive rotations torse', 9, '2x30')
-        , ('Vive rotations torse', 10, '2x30')
-
-        , ('Coups de pieds', 1, '2x10')
-        , ('Coups de pieds', 2, '2x10')
-        , ('Coups de pieds', 3, '2x15')
-        , ('Coups de pieds', 4, '2x15')
-        , ('Coups de pieds', 5, '2x20')
-        , ('Coups de pieds', 6, '2x20')
-        , ('Coups de pieds', 7, '3x15')
-        , ('Coups de pieds', 8, '3x20')
-        , ('Coups de pieds', 9, '3x20')
-        , ('Coups de pieds', 10, '3x20')
-
-        , ('Étirer le corps', 1, '1x')
-        , ('Étirer le corps', 2, '1x')
-        , ('Étirer le corps', 3, '1x')
-        , ('Étirer le corps', 4, '1x')
-        , ('Étirer le corps', 5, '1x')
-        , ('Étirer le corps', 6, '1x')
-        , ('Étirer le corps', 7, '1x')
-        , ('Étirer le corps', 8, '1x')
-        , ('Étirer le corps', 9, '1x')
-        , ('Étirer le corps', 10, '1x')
-      ;
-
     COMMIT;
 EOSQL
 }
 
-main "${1}"
+main "${@}"
