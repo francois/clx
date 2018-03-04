@@ -26,4 +26,4 @@ Laisser le système choisir le prochain exercise à faire:
 
 ## LICENSE
 
-This project and it's contents are distributed under a public domain license: you are free to do as you wish with the code and the contents.
+Ce logiciel et son contenu sont distribués sous la license GPL v2. Voir le fichier "LICENSE.txt" pour les détails.

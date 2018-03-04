@@ -1,5 +1,22 @@
 #!/bin/bash
 
+# Maintient et sélectionne une base de données d'exercises et leurs différentes exécutions
+# Copyright (C) 2018 François Beausoleil (francois@teksol.info)
+
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 DBFILE="${HOME}/.clx.db"
 
 main() {
@@ -45,6 +62,8 @@ show_help() {
   echo >&2 "Si nous suivons l'exemple ci-haut, clx choisira au hasard 2x10 squats OU 2x11 push ups,"
   echo >&2 "ensuite, il choisira l'exercise qui n'a pas été sélectionné, puis il passera au niveau"
   echo >&2 "2, soit 2x12 squats ou 2x13 push ups, et ainsi de suite."
+  echo >&2
+  echo >&2 "Distribué sous la license GPL v2. Lisez le code source pour les détails."
 }
 
 create_new() {
