@@ -96,6 +96,11 @@ WITH available_exercises(exercise, level) AS (
         EXCEPT
         SELECT exercise, level -- 2. remove the ones we've already completed
         FROM executions) t0
+    WHERE exercise NOT IN (    -- 3. remove the last exercise, regardless of level (don't repeat an exercise in two levels back-to-back)
+      SELECT exercise
+      FROM executions
+      ORDER BY executed_at DESC
+      LIMIT 1)
     GROUP BY exercise)
 
 , next_level(level) AS (
