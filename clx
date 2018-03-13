@@ -35,6 +35,11 @@ main() {
       add "${@}"
       ;;
 
+    drop)
+      shift
+      drop
+      ;;
+
     -h|--help|help)
       show_help
       ;;
@@ -84,6 +89,12 @@ add() {
     level=$(( level + 1 ))
     shift
   done
+}
+
+drop() {
+  echo >&2 "Retrait de la dernière exécution:"
+  sqlite3 "${DBFILE}" "SELECT * FROM executions WHERE executed_at = (SELECT max(executed_at) FROM executions)"
+  sqlite3 "${DBFILE}" "DELETE FROM executions WHERE executed_at = (SELECT max(executed_at) FROM executions)"
 }
 
 select_and_run_exercise() {
