@@ -133,7 +133,7 @@ instantiate_schema() {
       CREATE TABLE IF NOT EXISTS repetitions(
           exercise text not null references exercises
         , level int not null check(level >= 0)
-        , reps int not null
+        , reps text not null
         , primary key(exercise, level)
       );
 
